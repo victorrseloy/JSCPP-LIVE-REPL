@@ -42,28 +42,38 @@ module.exports =
   load: (rt) ->
     char_pointer = rt.normalPointerType(rt.charTypeLiteral)
     stdio = rt.config.stdio;
-    input_stream = stdio.drain();
+    input_stream = ""
+    if stdio.is_interactive()
+      input_stream = stdio.input;
+    else
+      input_stream =
+        input_val : stdio.drain()
+        get_input : ()->
+          @input_val
+        set_input : (new_val)->
+          @input_val = new_val
+
+
 
 
     _consume_next_char = ()->
       char_return = ""
-      if input_stream.length > 0
-        char_return = input_stream[0]
-        input_stream = input_stream.substr(1)
+      if input_stream.get_input().length > 0
+        char_return = input_stream.get_input()[0]
+        input_stream.set_input(input_stream.get_input().substr(1))
         char_return
       else
         throw "EOF"
 
     _consume_next_line = ()->
-      input_stream
-      next_line_break = input_stream.indexOf('\n');
+      next_line_break = input_stream.get_input().indexOf('\n');
 
       if next_line_break > -1
-        retval = input_stream.substr(0,next_line_break)
-        input_stream = input_stream.replace("#{retval}\n",'')
+        retval = input_stream.get_input().substr(0,next_line_break)
+        input_stream.set_input(input_stream.get_input().replace("#{retval}\n",''))
       else
-        retval = input_stream
-        input_stream = ""
+        retval = input_stream.get_input()
+        input_stream.set_input('')
 
       retval
 
@@ -262,7 +272,7 @@ module.exports =
     _get_input = (pre , next, match, type)->
       result = undefined
 
-      tmp = input_stream
+      tmp = input_stream.get_input()
 
       replace = "(#{match})"
 
@@ -286,7 +296,7 @@ module.exports =
 
       result = m[1]
 
-      input_stream = input_stream.substr(input_stream.indexOf(result)).replace(result, '').replace(next, '')
+      input_stream.set_input(input_stream.get_input().substr(input_stream.get_input().indexOf(result)).replace(result, '').replace(next, ''))
 
       #returing result
       result
@@ -423,9 +433,15 @@ module.exports =
     _sscanf = (rt, _this , original_string_pointer , format_pointer, args...) ->
 
       format = rt.getStringFromCharArray format_pointer
-      original_string = rt.getStringFromCharArray original_string_pointer
+
       original_input_stream = input_stream
-      input_stream = original_string
+
+      input_stream =
+        input_val : rt.getStringFromCharArray original_string_pointer
+        get_input : ()->
+          @input_val
+        set_input : (new_val)->
+          @input_val = new_val
       matched_values = __scanf(format)
 
       for val,i in matched_values

@@ -50,6 +50,14 @@ module.exports =
         write: (s) ->
           process.stdout.write s
           return
+        is_interactive:()->
+          if typeof input == 'object' and !!input.get_input and typeof input.get_input == 'function' and !!input.set_input and typeof input.set_input == 'function'
+            true
+          else
+            false
+
+        input: input
+
       includes: self.includes
     mergeConfig _config, config
     rt = new CRuntime(_config)
